@@ -11,6 +11,13 @@ def init_db():
     cursor = conn.cursor()
     
     # Создание таблицы для учета перевозок
+    # Создание таблицы для учета отправителей
+    cursor.execute('''CREATE TABLE IF NOT EXISTS senders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        sender_type TEXT,
+                        name TEXT,
+                        additional_info TEXT
+                      )''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS shipments (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         train_number TEXT,
@@ -33,9 +40,7 @@ def init_db():
     conn.close()
 
 # Добавление новой перевозки
-def add_shipment(train_number, cargo_type, wagon_type, locomotive_type, weight,
-                 departure_date, arrival_date, departure_point, destination_point,
-                 sender_type, sender_info, receiver_type, receiver_info, status):
+def add_shipment(train_number, cargo_type, wagon_type, locomotive_type, weight, departure_date, arrival_date, departure_point, destination_point, sender_type, sender_info, receiver_type, receiver_info, status):
     conn = sqlite3.connect('cargo_tracking.db')
     cursor = conn.cursor()
     
@@ -49,6 +54,17 @@ def add_shipment(train_number, cargo_type, wagon_type, locomotive_type, weight,
     
     conn.commit()
     conn.close()
+
+# Получение всех отправителей
+def get_all_senders():
+    conn = sqlite3.connect('cargo_tracking.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT name FROM senders')
+    rows = cursor.fetchall()
+
+    conn.close()
+    return [row[0] for row in rows]
 
 # Получение всех перевозок
 def get_all_shipments():
@@ -106,20 +122,19 @@ def show_add_form():
     left_fields = [
         ("Номер поезда", tk.Entry(left_frame)),
         ("Тип локомотива", ttk.Combobox(left_frame, values=["Электровоз", "Тепловоз", "Паровоз"])),
-        ("Тип груза", ttk.Combobox(left_frame, values=["Сыпучий", "Жидкий", "Твердый"])),
+        ("Тип груза", ttk.Combobox(left_frame, values=["Твердый", "Жидкий", "Газовый", "Сыпучий"])),
         ("Вес груза", tk.Entry(left_frame)),
-        ("Тип вагона", ttk.Combobox(left_frame, values=["Платформа", "Полувагон", "Цистерна"])),
-        ("Отправитель", ttk.Combobox(left_frame, values=["Компания А", "Компания Б"])),
+        ("Тип вагона", ttk.Combobox(left_frame, values=["Полувагон", "Цистерна", "Крытый вагон"])),
+        ("Отправитель", ttk.Combobox(left_frame, values=get_all_senders())),
     ]
-
+    
     # Правые поля формы
     right_fields = [
-    ("Дата отправления", tk.Entry(right_frame, validate='key', validatecommand=(form_window.register(lambda P: len(P) <= 10 and (P == '' or P.replace('.', '').isdigit() or P[-1] == '.')), '%P'))),
-    ("Дата прибытия", tk.Entry(right_frame, validate='key', validatecommand=(form_window.register(lambda P: len(P) <= 10 and (P == '' or P.replace('.', '').isdigit() or P[-1] == '.')), '%P'))),
+    ("Дата отправления", tk.Entry(right_frame, validate='key', validatecommand=(form_window.register(lambda P: len(P) <= 10 and (P == '' or P.replace('.', '').isdigit() or P[-1] == '.')), '%P'))),    ("Дата прибытия", tk.Entry(right_frame, validate='key', validatecommand=(form_window.register(lambda P: len(P) <= 10 and (P == '' or P.replace('.', '').isdigit() or P[-1] == '.')), '%P'))),
     ("Пункт отправления", tk.Entry(right_frame)),
     ("Пункт прибытия", tk.Entry(right_frame)),
     ("Доп. информация", tk.Entry(right_frame)),
-    ("Получатель", ttk.Combobox(right_frame, values=["Компания В", "Компания Г"])),
+    ("Получатель", ttk.Combobox(right_frame, values=get_all_senders())),
 ]
 
     for idx, (label_text, widget) in enumerate(left_fields):
@@ -140,22 +155,28 @@ def show_add_form():
             cargo_type = left_fields[2][1].get()
             weight = float(left_fields[3][1].get())
             wagon_type = left_fields[4][1].get()
-            sender = left_fields[5][1].get()
-            departure_date = right_fields[0][1].get().strip().strip()
+            sender_combobox = left_fields[5][1]
+            sender_combobox['values'] = get_all_senders()
+            sender = sender_combobox.get()
+            departure_date = right_fields[0][1].get().strip()
             if not departure_date:
                 raise ValueError('Дата отправления не может быть пустой')
-            arrival_date = right_fields[1][1].get().strip().strip()
+            arrival_date = right_fields[1][1].get().strip()
             if not arrival_date:
                 raise ValueError('Дата прибытия не может быть пустой')
             departure_point = right_fields[2][1].get()
             destination_point = right_fields[3][1].get()
-            sender_info = right_fields[4][1].get()
+            sender_info = ""
             receiver = right_fields[5][1].get()
             status = "запланирована"
 
             add_shipment(train_number, cargo_type, wagon_type, locomotive_type, weight,
                          departure_date, arrival_date, departure_point, destination_point,
                          sender, sender_info, receiver, "", status)
+
+            messagebox.showinfo("Успех", "Запись успешно сохранена")
+        except ValueError:
+            messagebox.showerror("Ошибка", "Некорректные данные, проверьте поля")
 
             messagebox.showinfo("Успех", "Запись успешно сохранена")
             form_window.destroy()
@@ -170,6 +191,202 @@ def show_add_form():
     cancel_button.grid(row=0, column=0, padx=10)
 
     save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
+    save_button.grid(row=0, column=1, padx=10)
+
+# Функция для отображения формы отправителя
+def show_sender_form():
+    sender_window = tk.Toplevel()
+    sender_window.title("Данные об отправителе")
+    sender_window.resizable(False, False)
+    sender_window.geometry('400x500')  # Устанавливаем начальный размер окна
+
+    label_title = tk.Label(sender_window, text="Данные об отправителе", font=("Arial", 14, "bold"), pady=10)
+    label_title.grid(row=0, column=0, columnspan=2, sticky='n')
+
+    sender_type = ttk.Combobox(sender_window, values=["Физическое лицо", "Юридическое лицо"], state='readonly')
+    sender_type.bind("<<ComboboxSelected>>", lambda e: update_sender_form(sender_window, sender_type, left_fields))
+    sender_type.grid(row=1, column=1, padx=10, pady=5, sticky='w')
+
+    left_fields = [
+        ("Тип отправителя", sender_type),
+        ("Фамилия", tk.Entry(sender_window)),
+        ("Имя", tk.Entry(sender_window)),
+        ("Отчество", tk.Entry(sender_window)),
+        ("Номер телефона", tk.Entry(sender_window)),
+        ("Паспорт", tk.Entry(sender_window)),
+        ("Прочая информация", tk.Entry(sender_window)),
+    ]
+
+    for idx, (label_text, widget) in enumerate(left_fields, start=1):
+        label = tk.Label(sender_window, text=label_text, font=("Arial", 12, "bold"))
+        label.grid(row=idx, column=0, padx=10, pady=5, sticky='e')
+        widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
+
+    # Кнопки управления
+    button_frame = ttk.Frame(sender_window)
+    button_frame.grid(row=len(left_fields) + 1, column=0, columnspan=2, pady=20)
+
+    cancel_button = ttk.Button(button_frame, text="Отменить", command=sender_window.destroy)
+    cancel_button.grid(row=0, column=0, padx=10)
+
+    save_button = ttk.Button(button_frame, text="Сохранить", command=lambda: save_sender(sender_window, sender_type))
+    save_button.grid(row=0, column=1, padx=10)
+
+    # Функция для обновления формы отправителя при выборе типа
+    def update_sender_form(window, sender_type_combobox, fields):
+        for widget in window.grid_slaves():
+            if int(widget.grid_info()["row"]) > 1:
+                widget.grid_forget()
+
+        if sender_type_combobox.get() == "Физическое лицо":
+            fields = [
+                ("Тип отправителя", sender_type_combobox),
+                ("Фамилия", tk.Entry(window)),
+                ("Имя", tk.Entry(window)),
+                ("Отчество", tk.Entry(window)),
+                ("Номер телефона", tk.Entry(window)),
+                ("Паспорт", tk.Entry(window)),
+                ("Прочая информация", tk.Entry(window)),
+            ]
+        else:
+            fields = [
+                ("Тип отправителя", sender_type_combobox),
+                ("Название организации", tk.Entry(window)),
+                ("Адрес регистрации", tk.Entry(window)),
+                ("ИНН", tk.Entry(window)),
+                ("ФИО Представителя", tk.Entry(window)),
+                ("Контактный номер", tk.Entry(window)),
+                ("Прочая информация", tk.Entry(window)),
+            ]
+    for idx, (label_text, widget) in enumerate(fields, start=1):
+        label = tk.Label(window, text=label_text, font=("Arial", 12, "bold"))
+        label.grid(row=idx, column=0, padx=10, pady=5, sticky='e')
+        widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
+
+
+    # Функция для сохранения отправителя в базу данных
+    def save_sender(window, sender_type_combobox):
+        conn = sqlite3.connect('cargo_tracking.db')
+        cursor = conn.cursor()
+
+        sender_type = sender_type_combobox.get()
+        if sender_type == "Физическое лицо":
+            name = f"{left_fields[1][1].get()} {left_fields[2][1].get()} {left_fields[3][1].get()}"
+            additional_info = left_fields[5][1].get()  # Паспорт
+        else:
+            name = left_fields[1][1].get()  # Название организации
+            additional_info = left_fields[3][1].get()  # ИНН
+
+        cursor.execute('''INSERT INTO senders (sender_type, name, additional_info) VALUES (?, ?, ?)''',
+                       (sender_type, name, additional_info))
+
+        conn.commit()
+        conn.close()
+        messagebox.showinfo("Успех", "Данные отправителя успешно сохранены")
+        window.destroy()
+    sender_window = tk.Toplevel()
+    sender_window.title("Данные об отправителе")
+    sender_window.resizable(False, False)
+    sender_window.geometry('')  # Автоматическое подстраивание размера
+
+    # Кнопки управления
+    button_frame = ttk.Frame(sender_window)
+    button_frame.grid(row=len(left_fields) + 1, column=0, columnspan=2, pady=10)
+
+    cancel_button = ttk.Button(button_frame, text="Отменить", command=sender_window.destroy)
+    cancel_button.grid(row=0, column=0, padx=10)
+
+    save_button = ttk.Button(button_frame, text="Сохранить", command=lambda: save_sender(sender_window, sender_type))
+    save_button.grid(row=0, column=1, padx=10)
+
+    label_title = tk.Label(sender_window, text="Данные об отправителе (физическое лицо)", font=("Arial", 14, "bold"), pady=10)
+    label_title.grid(row=0, column=0, columnspan=2, sticky='n')
+
+    sender_type = ttk.Combobox(sender_window, values=["Физическое лицо", "Юридическое лицо"], state='readonly')
+    sender_type.bind("<<ComboboxSelected>>", lambda e: update_sender_form(sender_window, sender_type))
+    sender_type.grid(row=1, column=1, padx=10, pady=5, sticky='w')
+
+    left_fields = [
+        ("Тип отправителя", sender_type),
+        ("Фамилия", tk.Entry(sender_window)),
+        ("Имя", tk.Entry(sender_window)),
+        ("Отчество", tk.Entry(sender_window)),
+        ("Номер телефона", tk.Entry(sender_window)),
+        ("Паспорт", tk.Entry(sender_window)),
+        ("Прочая информация", tk.Entry(sender_window)),
+    ]
+
+    for idx, (label_text, widget) in enumerate(left_fields, start=1):
+        label = tk.Label(sender_window, text=label_text, font=("Arial", 12, "bold"))
+        label.grid(row=idx, column=0, padx=10, pady=5, sticky='e')
+        widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
+
+    # Функция для обновления формы отправителя при выборе типа
+    def update_sender_form(window, sender_type_combobox, fields=None):
+    # Сначала удаляем только те виджеты, которые относятся к изменяющимся полям
+        for widget in window.grid_slaves():
+            if int(widget.grid_info()["row"]) > 1:
+                widget.grid_forget()
+
+    # Обновляем поля в зависимости от типа отправителя
+    if sender_type_combobox.get() == "Физическое лицо":
+        fields = [
+            ("Тип отправителя", sender_type_combobox),
+            ("Фамилия", tk.Entry(window)),
+            ("Имя", tk.Entry(window)),
+            ("Отчество", tk.Entry(window)),
+            ("Номер телефона", tk.Entry(window)),
+            ("Паспорт", tk.Entry(window)),
+            ("Прочая информация", tk.Entry(window)),
+        ]
+    else:
+        fields = [
+            ("Тип отправителя", sender_type_combobox),
+            ("Название организации", tk.Entry(window)),
+            ("Адрес регистрации", tk.Entry(window)),
+            ("ИНН", tk.Entry(window)),
+            ("ФИО Представителя", tk.Entry(window)),
+            ("Контактный номер", tk.Entry(window)),
+            ("Прочая информация", tk.Entry(window)),
+        ]
+    
+    # Отображаем обновленные поля
+    for idx, (label_text, widget) in enumerate(fields, start=1):
+        label = tk.Label(window, text=label_text, font=("Arial", 12, "bold"))
+        label.grid(row=idx, column=0, padx=10, pady=5, sticky='e')
+        widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
+    for idx, (label_text, widget) in enumerate(fields, start=1):
+        label = tk.Label(window, text=label_text, font=("Arial", 12, "bold"))
+        label.grid(row=idx, column=0, padx=10, pady=5, sticky='e')
+        widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
+
+
+    # Функция для сохранения отправителя в базу данных
+    def save_sender(window, sender_type_combobox):
+        conn = sqlite3.connect('cargo_tracking.db')
+        cursor = conn.cursor()
+
+        sender_type = sender_type_combobox.get()
+        if sender_type == "Физическое лицо":
+            name = f"{left_fields[1][1].get()} {left_fields[2][1].get()} {left_fields[3][1].get()}"
+            additional_info = left_fields[5][1].get()  # Паспорт
+        else:
+            name = left_fields[1][1].get()  # Название организации
+            additional_info = left_fields[3][1].get()  # ИНН
+
+        cursor.execute('''INSERT INTO senders (sender_type, name, additional_info) VALUES (?, ?, ?)''',
+                       (sender_type, name, additional_info))
+
+        conn.commit()
+        conn.close()
+        messagebox.showinfo("Успех", "Данные отправителя успешно сохранены")
+        window.destroy()
+    button_frame.grid(row=len(left_fields) + 1, column=0, columnspan=2, pady=10)
+
+    cancel_button = ttk.Button(button_frame, text="Отменить", command=sender_window.destroy)
+    cancel_button.grid(row=0, column=0, padx=10)
+
+    save_button = ttk.Button(button_frame, text="Сохранить", command=lambda: save_sender(sender_window, sender_type))
     save_button.grid(row=0, column=1, padx=10)
 
 # Функция для отображения помощи
@@ -196,6 +413,12 @@ def show_help():
 
 # Создание главного окна приложения
 def create_main_window():
+    # Добавление тестового отправителя
+    conn = sqlite3.connect('cargo_tracking.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO senders (sender_type, name, additional_info) VALUES ('Физическое лицо', 'Иван Иванов', 'Паспорт: 1234567890')")
+    conn.commit()
+    conn.close()
     global root, table_frame
     root = tk.Tk()
     root.title("Система учета перевозки грузов")
@@ -223,7 +446,7 @@ def create_main_window():
     orders_button = ttk.Button(top_frame, text="Заказы", width=button_width, command=update_main_table)
     orders_button.pack(side=tk.LEFT, padx=5)
 
-    sender_button = ttk.Button(top_frame, text="Отправители", width=button_width, command=lambda: messagebox.showinfo("Инфо", "Функция отправителей пока не реализована"))
+    sender_button = ttk.Button(top_frame, text="Отправители", width=button_width, command=show_sender_form)
     sender_button.pack(side=tk.LEFT, padx=5)
 
     receiver_button = ttk.Button(top_frame, text="Получатели", width=button_width, command=lambda: messagebox.showinfo("Инфо", "Функция получателей пока не реализована"))
