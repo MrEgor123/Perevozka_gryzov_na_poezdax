@@ -209,7 +209,7 @@ def show_add_form():
     save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
     save_button.grid(row=0, column=1, padx=10)
 
-# Функция для отображения формы отправителя
+# Функция для отображения формы добавления отправителя
 def show_sender_form():
     sender_window = tk.Toplevel()
     sender_window.title("Данные об отправителе")
@@ -276,7 +276,7 @@ def show_sender_form():
         save_button = ttk.Button(button_frame, text="Сохранить", command=lambda: save_sender(window, sender_type))
         save_button.grid(row=0, column=1, padx=10)
 
-# Функция для отображения формы получателя
+# Функция для отображения формы добавления получателя
 def show_receiver_form():
     receiver_window = tk.Toplevel()
     receiver_window.title("Данные о получателе")
@@ -420,35 +420,35 @@ def create_main_window():
     root = tk.Tk()
     root.title("Система учета перевозки грузов")
     root.state('zoomed')  # Установлено разрешение 16:9
-    root.configure(bg="#f0f0f0")
+    root.configure(bg="#f8f9fa")
 
     style = ttk.Style()
     style.configure("TButton", font=("Arial", 16), padding=15)
     
-    style.configure("TFrame", background="#f0f0f0")
+    style.configure("TFrame", background="#f8f9fa")
 
     # Верхние кнопки управления
     top_frame = ttk.Frame(root)
     top_frame.pack(side=tk.TOP, fill=tk.BOTH, pady=10)
 
-    button_width = 25  # Оптимизированная ширина кнопок для 16:9
+    button_width = 20  # Оптимизированная ширина кнопок для гармоничного внешнего вида
 
-    logo_image = tk.PhotoImage(file='assets/logo.png').subsample(10, 10)  # Уменьшение размера логотипа
-    logo_label = tk.Label(top_frame, image=logo_image, background="#f0f0f0")
+    logo_image = tk.PhotoImage(file='assets/logo.png').subsample(8, 8)  # Оптимальное уменьшение размера логотипа
+    logo_label = tk.Label(top_frame, image=logo_image, background="#f8f9fa")
     logo_label.image = logo_image  # Сохранение ссылки на изображение
     logo_label.pack(side=tk.LEFT, anchor='nw', padx=10, pady=10)
 
     orders_button = ttk.Button(top_frame, text="Заказы", width=button_width, command=update_main_table)
-    orders_button.pack(side=tk.LEFT, padx=5)
+    orders_button.pack(side=tk.LEFT, padx=10)
 
     sender_button = ttk.Button(top_frame, text="Отправители", width=button_width, command=show_sender_form)
-    sender_button.pack(side=tk.LEFT, padx=5)
+    sender_button.pack(side=tk.LEFT, padx=10)
 
     receiver_button = ttk.Button(top_frame, text="Получатели", width=button_width, command=show_receiver_form)
-    receiver_button.pack(side=tk.LEFT, padx=5)
+    receiver_button.pack(side=tk.LEFT, padx=10)
 
     save_button = ttk.Button(top_frame, text="Записать", width=button_width, command=show_add_form)
-    save_button.pack(side=tk.RIGHT, padx=5)
+    save_button.pack(side=tk.RIGHT, padx=10)
 
     # Таблица перевозок
     table_frame = ttk.Frame(root)
@@ -459,10 +459,10 @@ def create_main_window():
     bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
 
     help_button = ttk.Button(bottom_frame, text="Помощь", width=button_width, command=show_help)
-    help_button.pack(side=tk.LEFT, padx=5)
+    help_button.pack(side=tk.LEFT, padx=10)
 
     report_button = ttk.Button(bottom_frame, text="Отчеты", width=button_width, command=lambda: messagebox.showinfo("Инфо", "Функция формирования отчета пока не реализована"))
-    report_button.pack(side=tk.RIGHT, padx=5)
+    report_button.pack(side=tk.RIGHT, padx=10)
 
     update_main_table()
     root.mainloop()
@@ -476,7 +476,7 @@ def update_main_table():
 
     headers = ["ID", "Номер поезда", "Тип локомотива", "Тип груза", "Вес груза", "Тип вагона", "Дата отправления", "Дата прибытия", "Пункт отправления", "Пункт прибытия", "Тип отправителя", "Отправитель", "Тип получателя", "Получатель", "Статус"]
     for col, header in enumerate(headers):
-        label = tk.Label(table_frame, text=header, font=("Arial", 12, "bold"), borderwidth=1, relief="solid", padx=5, pady=5)
+        label = tk.Label(table_frame, text=header, font=("Arial", 12, "bold"), borderwidth=1, relief="solid", padx=5, pady=5, background="#f1f3f5")
         label.grid(row=0, column=col, sticky="nsew", ipadx=5, ipady=5, padx=2)
 
     for row_idx, shipment in enumerate(shipments, start=1):
@@ -499,16 +499,115 @@ def update_main_table():
             shipment[14], # Статус
         )
         for col_idx, value in enumerate(corrected_shipment):
-            label = tk.Label(table_frame, text=value, font=("Arial", 10), borderwidth=1, relief="solid", padx=5, pady=5)
+            label = tk.Label(table_frame, text=value, font=("Arial", 10), borderwidth=1, relief="solid", padx=5, pady=5, background="#ffffff")
             label.grid(row=row_idx, column=col_idx, sticky="nsew", ipadx=5, ipady=5, padx=2)
 
         # Добавление кнопки редактирования для каждой записи
         current_dir = os.path.dirname(os.path.abspath(__file__))
         edit_icon_path = os.path.join(current_dir, 'assets', 'redakt.png')
-        edit_icon = tk.PhotoImage(file=edit_icon_path).subsample(10, 10)  # Увеличение размера иконки
-        edit_button = ttk.Button(table_frame, image=edit_icon, command=lambda shipment_id=shipment[0]: edit_shipment(shipment_id))
+        edit_icon = tk.PhotoImage(file=edit_icon_path).subsample(25, 25)  # Оптимальное уменьшение размера иконки для гармоничного вида
+        edit_button = tk.Button(table_frame, image=edit_icon, borderwidth=0, background="#f8f9fa", command=lambda shipment_id=shipment[0]: show_edit_form(shipment_id))
         edit_button.image = edit_icon  # Сохранение ссылки на изображение
         edit_button.grid(row=row_idx, column=len(corrected_shipment), padx=5, pady=5, sticky='nsew')
+
+# Функция для отображения формы редактирования перевозки
+def show_edit_form(shipment_id):
+    shipment = next((s for s in get_all_shipments() if s[0] == shipment_id), None)
+    if not shipment:
+        messagebox.showerror("Ошибка", "Запись не найдена")
+        return
+
+    form_window = tk.Toplevel()
+    form_window.title("Редактировать перевозку")
+    form_window.geometry('800x600')  # Задаем размер окна
+    form_window.resizable(False, False)
+
+    left_frame = ttk.Frame(form_window, style="Custom.TFrame")
+    left_frame.grid(row=0, column=0, padx=20, pady=20, sticky='n')
+
+    right_frame = ttk.Frame(form_window, style="Custom.TFrame")
+    right_frame.grid(row=0, column=1, padx=20, pady=20, sticky='n')
+
+    # Левые поля формы
+    left_fields = [
+        ("Номер поезда", tk.Entry(left_frame)),
+        ("Тип локомотива", ttk.Combobox(left_frame, values=["Электровоз", "Тепловоз", "Паровоз"])),
+        ("Тип груза", ttk.Combobox(left_frame, values=["Твердый", "Жидкий", "Газовый", "Сыпучий"])),
+        ("Тип вагона", ttk.Combobox(left_frame, values=["Полувагон", "Цистерна", "Крытый вагон"])),
+        ("Вес груза", tk.Entry(left_frame)),
+        ("Отправитель", ttk.Combobox(left_frame, values=get_all_senders())),
+    ]
+    
+    # Правые поля формы
+    right_fields = [
+        ("Дата отправления", tk.Entry(right_frame)),
+        ("Дата прибытия", tk.Entry(right_frame)),
+        ("Пункт отправления", tk.Entry(right_frame)),
+        ("Пункт прибытия", tk.Entry(right_frame)),
+        ("Доп. информация", tk.Entry(right_frame)),
+        ("Получатель", ttk.Combobox(right_frame, values=get_all_receivers())),
+        ("Изменение статуса", ttk.Combobox(right_frame, values=["в процессе", "завершен", "отменен"])),
+    ]
+
+    # Установка текущих значений
+    left_fields[0][1].insert(0, shipment[1])
+    left_fields[1][1].set(shipment[4])
+    left_fields[2][1].set(shipment[2])
+    left_fields[3][1].set(shipment[3])
+    left_fields[4][1].insert(0, shipment[5])
+    left_fields[5][1].set(shipment[11])
+
+    right_fields[0][1].insert(0, shipment[6])
+    right_fields[1][1].insert(0, shipment[7])
+    right_fields[2][1].insert(0, shipment[8])
+    right_fields[3][1].insert(0, shipment[9])
+    right_fields[4][1].insert(0, shipment[13])
+    right_fields[5][1].set(shipment[13])
+    right_fields[6][1].set(shipment[14])
+
+    for idx, (label_text, widget) in enumerate(left_fields):
+        label = tk.Label(left_frame, text=label_text, font=("Arial", 12, "bold"), foreground="#003366")
+        label.grid(row=idx, column=0, padx=10, pady=5, sticky='e')
+        widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w', ipadx=5)
+
+    for idx, (label_text, widget) in enumerate(right_fields):
+        label = tk.Label(right_frame, text=label_text, font=("Arial", 12, "bold"), foreground="#003366")
+        label.grid(row=idx, column=0, padx=10, pady=5, sticky='e')
+        widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
+
+    # Кнопки управления
+    def save_data():
+        try:
+            updated_data = {
+                "train_number": left_fields[0][1].get(),
+                "locomotive_type": left_fields[1][1].get(),
+                "cargo_type": left_fields[2][1].get(),
+                "wagon_type": left_fields[3][1].get(),
+                "weight": float(left_fields[4][1].get()),
+                "departure_date": right_fields[0][1].get(),
+                "arrival_date": right_fields[1][1].get(),
+                "departure_point": right_fields[2][1].get(),
+                "destination_point": right_fields[3][1].get(),
+                "receiver_info": right_fields[4][1].get(),
+                "receiver_type": right_fields[5][1].get(),
+                "status": right_fields[6][1].get(),
+            }
+
+            update_shipment(shipment_id, **updated_data)
+            messagebox.showinfo("Успех", "Запись успешно обновлена")
+            form_window.destroy()
+            update_main_table()
+        except ValueError:
+            messagebox.showerror("Ошибка", "Некорректные данные, проверьте поля")
+
+    button_frame = ttk.Frame(form_window, style="Custom.TFrame")
+    button_frame.grid(row=1, column=0, columnspan=2, pady=20)
+
+    cancel_button = ttk.Button(button_frame, text="Отменить", command=form_window.destroy)
+    cancel_button.grid(row=0, column=0, padx=10)
+
+    save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
+    save_button.grid(row=0, column=1, padx=10)
 
 if __name__ == "__main__":
     init_db()
