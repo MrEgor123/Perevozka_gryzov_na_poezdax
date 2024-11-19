@@ -34,7 +34,8 @@ def init_db():
                         sender_info TEXT,
                         receiver_type TEXT,
                         receiver_info TEXT,
-                        status TEXT
+                        status TEXT,
+                        additional_info TEXT
                       )''')
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS receivers (
@@ -48,17 +49,17 @@ def init_db():
     conn.close()
 
 # Добавление новой перевозки
-def add_shipment(train_number, locomotive_type, cargo_type, wagon_type, weight, departure_date, arrival_date, departure_point, destination_point, sender_type, sender_info, receiver_type, receiver_info, status):
+def add_shipment(train_number, locomotive_type, cargo_type, wagon_type, weight, departure_date, arrival_date, departure_point, destination_point, sender_type, sender_info, receiver_type, receiver_info, status, additional_info):
     conn = sqlite3.connect('cargo_tracking.db')
     cursor = conn.cursor()
     
     cursor.execute('''INSERT INTO shipments (train_number, locomotive_type, cargo_type, wagon_type, weight,
                     departure_date, arrival_date, departure_point, destination_point,
-                    sender_type, sender_info, receiver_type, receiver_info, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                    sender_type, sender_info, receiver_type, receiver_info, status, additional_info)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                    (train_number, locomotive_type, cargo_type, wagon_type, weight,
                     departure_date, arrival_date, departure_point, destination_point,
-                    sender_type, sender_info, receiver_type, receiver_info, status))
+                    sender_type, sender_info, receiver_type, receiver_info, status, additional_info))
     
     conn.commit()
     conn.close()
@@ -109,14 +110,26 @@ def update_shipment(shipment_id, **kwargs):
     conn.commit()
     conn.close()
 
-# Формирование отчета по выполненным перевозкам
-def generate_report():
+# Формирование отчета по выполненным перевозкам с фильтрацией
+def generate_report(departure_filter=None, destination_filter=None, filter_options=None):
     conn = sqlite3.connect('cargo_tracking.db')
     cursor = conn.cursor()
     
-    cursor.execute('''SELECT departure_point, destination_point, COUNT(*) as train_count, SUM(weight) as total_weight
-                      FROM shipments WHERE status = "завершен"
-                      GROUP BY departure_point, destination_point''')
+    query = '''SELECT departure_point, destination_point, COUNT(*) as train_count, SUM(weight) as total_weight
+               FROM shipments WHERE status = "завершен"'''
+    params = []
+    
+    if departure_filter:
+        query += " AND departure_point = ?"
+        params.append(departure_filter)
+    
+    if destination_filter:
+        query += " AND destination_point = ?"
+        params.append(destination_filter)
+    
+    query += " GROUP BY departure_point, destination_point"
+    
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     
     conn.close()
@@ -186,13 +199,13 @@ def show_add_form():
                 raise ValueError('Дата прибытия не может быть пустой')
             departure_point = right_fields[2][1].get()
             destination_point = right_fields[3][1].get()
-            sender_info = ""
+            additional_info = right_fields[4][1].get()
             receiver = right_fields[5][1].get()
             status = "запланирована"
 
             add_shipment(train_number, locomotive_type, cargo_type, wagon_type, weight,
                          departure_date, arrival_date, departure_point, destination_point,
-                         sender, sender_info, receiver, "", status)
+                         sender, "", receiver, "", status, additional_info)
 
             messagebox.showinfo("Успех", "Запись успешно сохранена")
             form_window.destroy()
@@ -461,7 +474,7 @@ def create_main_window():
     help_button = ttk.Button(bottom_frame, text="Помощь", width=button_width, command=show_help)
     help_button.pack(side=tk.LEFT, padx=10)
 
-    report_button = ttk.Button(bottom_frame, text="Отчеты", width=button_width, command=lambda: messagebox.showinfo("Инфо", "Функция формирования отчета пока не реализована"))
+    report_button = ttk.Button(bottom_frame, text="Отчеты", width=button_width, command=show_report_form)
     report_button.pack(side=tk.RIGHT, padx=10)
 
     update_main_table()
@@ -561,7 +574,7 @@ def show_edit_form(shipment_id):
     right_fields[1][1].insert(0, shipment[7])
     right_fields[2][1].insert(0, shipment[8])
     right_fields[3][1].insert(0, shipment[9])
-    right_fields[4][1].insert(0, shipment[13])
+    right_fields[4][1].insert(0, shipment[15])
     right_fields[5][1].set(shipment[13])
     right_fields[6][1].set(shipment[14])
 
@@ -588,7 +601,7 @@ def show_edit_form(shipment_id):
                 "arrival_date": right_fields[1][1].get(),
                 "departure_point": right_fields[2][1].get(),
                 "destination_point": right_fields[3][1].get(),
-                "receiver_info": right_fields[4][1].get(),
+                "additional_info": right_fields[4][1].get(),
                 "receiver_type": right_fields[5][1].get(),
                 "status": right_fields[6][1].get(),
             }
@@ -608,6 +621,72 @@ def show_edit_form(shipment_id):
 
     save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
     save_button.grid(row=0, column=1, padx=10)
+
+# Функция для отображения формы отчета
+def show_report_form():
+    report_window = tk.Toplevel()
+    report_window.title("Отчет по перевозкам")
+    report_window.geometry('800x600')  # Задаем размер окна
+    report_window.resizable(False, False)
+
+    # Верхние кнопки управления
+    top_frame = ttk.Frame(report_window)
+    top_frame.pack(side=tk.TOP, fill=tk.X, pady=10)
+
+    filter_button = ttk.Button(top_frame, text="Фильтр", command=show_filter_form)
+    filter_button.pack(side=tk.LEFT, padx=10)
+
+    reset_button = ttk.Button(top_frame, text="Сброс", command=lambda: messagebox.showinfo("Сброс", "Функция сброса пока не реализована"))
+    reset_button.pack(side=tk.RIGHT, padx=10)
+
+    # Основная часть окна для отчета
+    main_frame = ttk.Frame(report_window)
+    main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+    report_data = generate_report()
+    report_text = ""
+    for row in report_data:
+        report_text += f"Отправление: {row[0]}, Прибытие: {row[1]}, Количество поездов: {row[2]}, Общий вес: {row[3]} тонн\n"
+
+    summary_label = tk.Label(main_frame, text=report_text, font=("Arial", 14, "bold"), foreground="#003366", justify="left")
+    summary_label.pack(expand=True, fill='both')
+
+    # Нижняя кнопка закрытия
+    bottom_frame = ttk.Frame(report_window)
+    bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
+
+    close_button = ttk.Button(bottom_frame, text="Закрыть", command=report_window.destroy)
+    close_button.pack(side=tk.BOTTOM, pady=10)
+
+# Функция для отображения формы фильтра
+def show_filter_form():
+    filter_window = tk.Toplevel()
+    filter_window.title("Выбор фильтрации")
+    filter_window.geometry('600x400')  # Задаем размер окна
+    filter_window.resizable(False, False)
+
+    # Основной текст
+    filter_label = tk.Label(filter_window, text="Выбор фильтрации", font=("Arial", 14, "bold"), foreground="#003366")
+    filter_label.pack(expand=True, fill='both', padx=20, pady=20)
+
+    # Добавление фильтров для формирования отчетов
+    filter_options = [
+        ("Сколько поездов прибыло в определенный пункт", tk.Entry(filter_window)),
+        ("Сколько поездов отправилось из определенного пункта", tk.Entry(filter_window)),
+        ("Отслеживание объемов и типов перевезенных грузов", tk.Entry(filter_window)),
+    ]
+
+    for idx, (label_text, widget) in enumerate(filter_options):
+        label = tk.Label(filter_window, text=label_text, font=("Arial", 12, "bold"), foreground="#003366")
+        label.pack(padx=10, pady=5, anchor='w')
+        widget.pack(padx=10, pady=5, anchor='w', fill='x')
+
+    # Нижняя кнопка закрытия
+    bottom_frame = ttk.Frame(filter_window)
+    bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10)
+
+    close_button = ttk.Button(bottom_frame, text="Закрыть", command=filter_window.destroy)
+    close_button.pack(side=tk.BOTTOM, pady=10)
 
 if __name__ == "__main__":
     init_db()
