@@ -158,6 +158,7 @@ def show_add_form():
         ("Тип вагона", ttk.Combobox(left_frame, values=["Полувагон", "Цистерна", "Крытый вагон"])),
         ("Вес груза", tk.Entry(left_frame)),
         ("Отправитель", ttk.Combobox(left_frame, values=get_all_senders())),
+        ("Тип отправителя", ttk.Combobox(left_frame, values=["Физическое лицо", "Юридическое лицо"])),
     ]
     
     # Правые поля формы
@@ -168,6 +169,7 @@ def show_add_form():
         ("Пункт прибытия", tk.Entry(right_frame)),
         ("Доп. информация", tk.Entry(right_frame)),
         ("Получатель", ttk.Combobox(right_frame, values=get_all_receivers())),
+        ("Тип получателя", ttk.Combobox(right_frame, values=["Физическое лицо", "Юридическое лицо"])),
     ]
 
     for idx, (label_text, widget) in enumerate(left_fields):
@@ -493,14 +495,13 @@ def update_main_table():
         label.grid(row=0, column=col, sticky="nsew", ipadx=5, ipady=5, padx=2)
 
     for row_idx, shipment in enumerate(shipments, start=1):
-        # Исправляем порядок значений в строке таблицы
         corrected_shipment = (
             shipment[0],  # ID
             shipment[1],  # Номер поезда
-            shipment[4],  # Тип локомотива
-            shipment[2],  # Тип груза
+            shipment[2],  # Тип локомотива
+            shipment[3],  # Тип груза
             shipment[5],  # Вес груза
-            shipment[3],  # Тип вагона
+            shipment[4],  # Тип вагона
             shipment[6],  # Дата отправления
             shipment[7],  # Дата прибытия
             shipment[8],  # Пункт отправления
