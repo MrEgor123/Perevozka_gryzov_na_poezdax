@@ -468,6 +468,19 @@ def create_main_window():
     # Таблица перевозок
     table_frame = ttk.Frame(root)
     table_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+    # Кнопки сортировки
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sort_icon_path = os.path.join(current_dir, 'assets', 'sort.png')
+    sort_icon = tk.PhotoImage(file=sort_icon_path).subsample(50, 50)
+
+    sort_by_order_button = ttk.Button(top_frame, image=sort_icon, command=lambda: update_main_table(order_by='train_number'))
+    sort_by_order_button.image = sort_icon
+    sort_by_order_button.pack(side=tk.LEFT, padx=5)
+
+    sort_by_status_button = ttk.Button(top_frame, image=sort_icon, command=lambda: update_main_table(order_by='status'))
+    sort_by_status_button.image = sort_icon
+    sort_by_status_button.pack(side=tk.LEFT, padx=5)
     
     # Нижние кнопки управления
     bottom_frame = ttk.Frame(root)
@@ -483,34 +496,16 @@ def create_main_window():
     root.mainloop()
 
 # Обновление главной таблицы с перевозками
-def update_main_table(order_by=None):
+def update_main_table():
     for widget in table_frame.winfo_children():
         widget.destroy()
 
     shipments = get_all_shipments()
 
-    # Сортировка данных
-    if order_by == 'train_number':
-        shipments.sort(key=lambda x: x[1])  # Сортировка по номеру поезда
-    elif order_by == 'status':
-        shipments.sort(key=lambda x: x[14])  # Сортировка по статусу
-
     headers = ["ID", "Номер поезда", "Тип локомотива", "Тип груза", "Вес груза", "Тип вагона", "Дата отправления", "Дата прибытия", "Пункт отправления", "Пункт прибытия", "Тип отправителя", "Отправитель", "Тип получателя", "Получатель", "Статус"]
     for col, header in enumerate(headers):
         label = tk.Label(table_frame, text=header, font=("Arial", 12, "bold"), borderwidth=1, relief="solid", padx=5, pady=5, background="#f1f3f5")
         label.grid(row=0, column=col, sticky="nsew", ipadx=5, ipady=5, padx=2)
-
-    # Добавляем кнопки сортировки над колонками "Номер поезда" и "Статус"
-    sort_icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'sort.png')
-    sort_icon = tk.PhotoImage(file=sort_icon_path).subsample(50, 50)
-
-    train_sort_button = ttk.Button(table_frame, image=sort_icon, command=lambda: update_main_table(order_by='train_number'))
-    train_sort_button.image = sort_icon
-    train_sort_button.grid(row=0, column=1, pady=2)
-
-    status_sort_button = ttk.Button(table_frame, image=sort_icon, command=lambda: update_main_table(order_by='status'))
-    status_sort_button.image = sort_icon
-    status_sort_button.grid(row=0, column=14, pady=2)
 
     for row_idx, shipment in enumerate(shipments, start=1):
         corrected_shipment = (
@@ -640,7 +635,6 @@ def show_edit_form(shipment_id):
 
     save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
     save_button.grid(row=0, column=1, padx=10)
-
 
 # Функция для отображения формы отчетов
 def show_reports():

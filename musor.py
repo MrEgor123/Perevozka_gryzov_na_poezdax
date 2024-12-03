@@ -500,17 +500,19 @@ def update_main_table(order_by=None):
         label = tk.Label(table_frame, text=header, font=("Arial", 12, "bold"), borderwidth=1, relief="solid", padx=5, pady=5, background="#f1f3f5")
         label.grid(row=0, column=col, sticky="nsew", ipadx=5, ipady=5, padx=2)
 
-    # Добавляем кнопки сортировки над колонками "Номер поезда" и "Статус"
-    sort_icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'sort.png')
-    sort_icon = tk.PhotoImage(file=sort_icon_path).subsample(50, 50)
-
-    train_sort_button = ttk.Button(table_frame, image=sort_icon, command=lambda: update_main_table(order_by='train_number'))
-    train_sort_button.image = sort_icon
-    train_sort_button.grid(row=0, column=1, pady=2)
-
-    status_sort_button = ttk.Button(table_frame, image=sort_icon, command=lambda: update_main_table(order_by='status'))
-    status_sort_button.image = sort_icon
-    status_sort_button.grid(row=0, column=14, pady=2)
+        # Добавляем кнопки сортировки над колонками "Номер поезда" и "Статус"
+        if header == "Номер поезда":
+            sort_icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'sort.png')
+            sort_icon = tk.PhotoImage(file=sort_icon_path).subsample(50, 50)
+            sort_button = ttk.Button(table_frame, image=sort_icon, command=lambda: update_main_table(order_by='train_number'))
+            sort_button.image = sort_icon
+            sort_button.grid(row=0, column=col, pady=2)
+        elif header == "Статус":
+            sort_icon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets', 'sort.png')
+            sort_icon = tk.PhotoImage(file=sort_icon_path).subsample(50, 50)
+            sort_button = ttk.Button(table_frame, image=sort_icon, command=lambda: update_main_table(order_by='status'))
+            sort_button.image = sort_icon
+            sort_button.grid(row=0, column=col, pady=2)
 
     for row_idx, shipment in enumerate(shipments, start=1):
         corrected_shipment = (
@@ -640,7 +642,6 @@ def show_edit_form(shipment_id):
 
     save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
     save_button.grid(row=0, column=1, padx=10)
-
 
 # Функция для отображения формы отчетов
 def show_reports():
