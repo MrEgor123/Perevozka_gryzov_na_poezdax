@@ -777,99 +777,104 @@ def show_edit_form(shipment_id):
 # Функция для отображения формы отчетов
 def show_reports():
     report_window = tk.Toplevel()
-    report_window.title("Отчет по перевозкам")
-    report_window.geometry('800x600')
+    report_window.title("Отчеты по перевозкам")
+    report_window.geometry('700x500')
     report_window.resizable(False, False)
 
+    # Основной фрейм для отчета
     report_frame = ttk.Frame(report_window, padding=20)
     report_frame.pack(fill=tk.BOTH, expand=True)
 
-    # Кнопки в верхней части окна
-    filter_button = ttk.Button(report_frame, text="Фильтр", command=show_filter_options)
+    # Кнопки фильтра и сброса
+    filter_button = ttk.Button(report_frame, text="Фильтр", command=lambda: show_filter_options(report_text))
     filter_button.grid(row=0, column=0, padx=10, pady=10, sticky='w')
 
-    reset_button = ttk.Button(report_frame, text="Сброс", command=lambda: update_report(report_text))
-    reset_button.grid(row=0, column=1, padx=10, pady=10, sticky='e')
+    reset_button = ttk.Button(report_frame, text="Сброс", command=lambda: update_report(report_text, reset=True))
+    reset_button.grid(row=0, column=1, padx=10, pady=10, sticky='w')
 
-    # Текст с описанием отчетов
-    summary_label = tk.Label(report_frame, text="Сводные данные о перевозках", font=("Arial", 16, "bold"))
+    # Заголовок
+    summary_label = tk.Label(report_frame, text="Сводные данные по перевозкам", font=("Arial", 16, "bold"))
     summary_label.grid(row=1, column=0, columnspan=2, pady=10)
 
-    # Текстовая область для отображения данных отчета
-    report_text = tk.Text(report_frame, height=15, width=80, wrap='word')
-    report_text.grid(row=2, column=0, columnspan=2, pady=10, padx=10)
-    report_text.configure(font=("Arial", 12))
+    # Текстовая область для отчета
+    report_text = tk.Text(report_frame, height=20, width=80, wrap='word', font=("Arial", 12))
+    report_text.grid(row=2, column=0, columnspan=2, padx=10, pady=10)
+    report_text.configure(state='disabled')
 
-    # Кнопка закрытия внизу
+    # Кнопка для закрытия окна
     close_button = ttk.Button(report_frame, text="Закрыть", command=report_window.destroy)
     close_button.grid(row=3, column=0, columnspan=2, pady=20)
 
-    # Обновление отчета
+    # Отображение данных отчета при открытии окна
     update_report(report_text)
 
-def update_report(report_text=None, filters=None):
+def update_report(report_text, filters=None, reset=False):
+    if reset:
+        report_text.configure(state='normal')  # Делаем текстовую область редактируемой для очистки
+        report_text.delete(1.0, tk.END)       # Полностью очищаем текстовую область
+        report_text.configure(state='disabled')  # Возвращаем текстовую область в состояние только для чтения
+        return
+
     rows = generate_report(**filters) if filters else generate_report()
     report_data = ""
+
     for row in rows:
-        report_data += f"Пункт отправления: {row[0]}, Пункт прибытия: {row[1]}, Количество поездов: {row[2]}, Общий вес: {row[3]} тонн\n"
-    if report_text:
-        report_text.delete(1.0, tk.END)
-        report_text.insert(tk.END, report_data)
+        report_data += (
+            f"Пункт отправления: {row[0]}, "
+            f"Пункт прибытия: {row[1]}, "
+            f"Количество поездов: {row[2]}, "
+            f"Общий вес: {row[3]} тонн\n"
+        )
+
+    report_text.configure(state='normal')  # Делаем текстовую область редактируемой для обновления
+    report_text.delete(1.0, tk.END)       # Очищаем текстовую область
+    report_text.insert(tk.END, report_data if report_data else "Нет данных для отображения.")
+    report_text.configure(state='disabled')  # Возвращаем текстовую область в состояние только для чтения
+
 
 # Функция для отображения фильтрации в отчетах
-def show_filter_options():
+def show_filter_options(report_text):
     filter_window = tk.Toplevel()
-    filter_window.title("Выбор фильтрации")
+    filter_window.title("Фильтр данных")
     filter_window.geometry('400x300')
     filter_window.resizable(False, False)
 
+    # Основной фрейм
     filter_frame = ttk.Frame(filter_window, padding=10)
     filter_frame.pack(fill=tk.BOTH, expand=True)
 
-    filters = {}
+    # Поля для фильтров
+    departure_label = tk.Label(filter_frame, text="Пункт отправления:")
+    departure_label.grid(row=0, column=0, padx=10, pady=5, sticky='e')
+    departure_entry = ttk.Entry(filter_frame)
+    departure_entry.grid(row=0, column=1, padx=10, pady=5, sticky='w')
 
-    # Поля фильтрации
-    departure_point_label = tk.Label(filter_frame, text="Пункт отправления:")
-    departure_point_label.grid(row=0, column=0, sticky='w', pady=5)
-    departure_point_entry = ttk.Entry(filter_frame)
-    departure_point_entry.grid(row=0, column=1, pady=5)
+    destination_label = tk.Label(filter_frame, text="Пункт прибытия:")
+    destination_label.grid(row=1, column=0, padx=10, pady=5, sticky='e')
+    destination_entry = ttk.Entry(filter_frame)
+    destination_entry.grid(row=1, column=1, padx=10, pady=5, sticky='w')
 
-    destination_point_label = tk.Label(filter_frame, text="Пункт прибытия:")
-    destination_point_label.grid(row=1, column=0, sticky='w', pady=5)
-    destination_point_entry = ttk.Entry(filter_frame)
-    destination_point_entry.grid(row=1, column=1, pady=5)
+    cargo_label = tk.Label(filter_frame, text="Тип груза:")
+    cargo_label.grid(row=2, column=0, padx=10, pady=5, sticky='e')
+    cargo_combobox = ttk.Combobox(filter_frame, values=["Твердый", "Жидкий", "Газовый", "Сыпучий"])
+    cargo_combobox.grid(row=2, column=1, padx=10, pady=5, sticky='w')
 
-    cargo_type_label = tk.Label(filter_frame, text="Тип груза:")
-    cargo_type_label.grid(row=2, column=0, sticky='w', pady=5)
-    cargo_type_combobox = ttk.Combobox(filter_frame, values=["Твердый", "Жидкий", "Газовый", "Сыпучий"])
-    cargo_type_combobox.grid(row=2, column=1, pady=5)
-
+    # Применение фильтров
     def apply_filters():
-        filters['departure_point'] = departure_point_entry.get() if departure_point_entry.get() else None
-        filters['destination_point'] = destination_point_entry.get() if destination_point_entry.get() else None
-        filters['cargo_type'] = cargo_type_combobox.get() if cargo_type_combobox.get() else None
+        filters = {
+            "departure_point": departure_entry.get() if departure_entry.get() else None,
+            "destination_point": destination_entry.get() if destination_entry.get() else None,
+            "cargo_type": cargo_combobox.get() if cargo_combobox.get() else None,
+        }
         update_report(report_text, filters)
         filter_window.destroy()
 
+    # Кнопки управления
     apply_button = ttk.Button(filter_frame, text="Применить", command=apply_filters)
     apply_button.grid(row=3, column=0, columnspan=2, pady=10)
 
-    close_button = ttk.Button(filter_frame, text="Закрыть", command=filter_window.destroy)
-    close_button.grid(row=4, column=0, columnspan=2, pady=5)
-
-    def apply_filters():
-        filters['departure_point'] = departure_point_entry.get() if departure_point_entry.get() else None
-        filters['destination_point'] = destination_point_entry.get() if destination_point_entry.get() else None
-        filters['cargo_type'] = cargo_type_combobox.get() if cargo_type_combobox.get() else None
-        update_report(report_text, filters)
-        filter_window.destroy()
-
-    apply_button = ttk.Button(filter_frame, text="Применить", command=apply_filters)
-    apply_button.grid(row=3, column=0, columnspan=2, pady=10)
-
-    close_button = ttk.Button(filter_frame, text="Закрыть", command=filter_window.destroy)
-    close_button.grid(row=4, column=0, columnspan=2, pady=5)
-
+    cancel_button = ttk.Button(filter_frame, text="Отмена", command=filter_window.destroy)
+    cancel_button.grid(row=4, column=0, columnspan=2, pady=5)
 
 if __name__ == "__main__":
     init_db()
