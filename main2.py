@@ -595,6 +595,7 @@ sort_order_train_number_desc = False  # По умолчанию сортиров
 sort_order_status_desc = False  # По умолчанию сортировка по возрастанию
 
 # Обновление главной таблицы с перевозками
+# Обновление главной таблицы с перевозками
 def update_main_table(order_by=None):
     global sort_order_train_number_desc, sort_order_status_desc
 
@@ -607,24 +608,28 @@ def update_main_table(order_by=None):
     # Сортировка данных
     if order_by == 'train_number':
         sort_order_train_number_desc = not sort_order_train_number_desc
-        shipments.sort(key=lambda x: x[1], reverse=sort_order_train_number_desc)
+        shipments.sort(key=lambda x: int(x[1]) if x[1].isdigit() else 0, reverse=sort_order_train_number_desc)
     elif order_by == 'status':
         sort_order_status_desc = not sort_order_status_desc
         shipments.sort(key=lambda x: x[14], reverse=sort_order_status_desc)
 
-    # Обновленный порядок заголовков
-    headers = ["ID", "Номер поезда", "Тип локомотива", "Тип вагона", "Тип груза", "Вес груза", "Дата отправления", "Дата прибытия", "Пункт отправления", "Пункт прибытия", "Тип отправителя", "Отправитель", "Тип получателя", "Получатель", "Статус"]
+    # Обновленный порядок заголовков и данных
+    headers = ["ID", "Номер поезда", "Тип локомотива", "Тип вагона", "Тип груза", "Вес груза",
+               "Дата отправления", "Дата прибытия", "Пункт отправления", "Пункт прибытия",
+               "Тип отправителя", "Отправитель", "Тип получателя", "Получатель", "Статус"]
+    
     for col, header in enumerate(headers):
-        label = tk.Label(table_inner_frame, text=header, font=("Arial", 12, "bold"), borderwidth=1, relief="solid", padx=5, pady=5, background="#e0e0e0")
+        label = tk.Label(table_inner_frame, text=header, font=("Arial", 12, "bold"), borderwidth=1, relief="solid", 
+                         padx=5, pady=5, background="#e0e0e0")
         label.grid(row=0, column=col, sticky="nsew", ipadx=5, ipady=5, padx=2)
 
     for row_idx, shipment in enumerate(shipments, start=1):
         corrected_shipment = (
             shipment[0],  # ID
             shipment[1],  # Номер поезда
-            shipment[2],  # Тип локомотива
-            shipment[4],  # Тип вагона (перенесли на нужное место)
-            shipment[3],  # Тип груза (перенесли на нужное место)
+            shipment[4],  # Тип локомотива
+            shipment[3],  # Тип вагона
+            shipment[2],  # Тип груза
             shipment[5],  # Вес груза
             shipment[6],  # Дата отправления
             shipment[7],  # Дата прибытия
@@ -637,16 +642,19 @@ def update_main_table(order_by=None):
             shipment[14]  # Статус
         )
         for col_idx, value in enumerate(corrected_shipment):
-            label = tk.Label(table_inner_frame, text=value, font=("Arial", 10), borderwidth=1, relief="solid", padx=5, pady=5, background="#ffffff")
+            label = tk.Label(table_inner_frame, text=value, font=("Arial", 10), borderwidth=1, relief="solid", 
+                             padx=5, pady=5, background="#ffffff")
             label.grid(row=row_idx, column=col_idx, sticky="nsew", ipadx=5, ipady=5, padx=2)
 
         # Кнопка редактирования
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        edit_icon_path = os.path.join(current_dir, 'assets', 'redakt.png')
-        edit_icon = tk.PhotoImage(file=edit_icon_path).subsample(25, 25)
-        edit_button = tk.Button(table_inner_frame, image=edit_icon, borderwidth=0, background="#f8f9fa", command=lambda shipment_id=shipment[0]: show_edit_form(shipment_id))
+        edit_icon = tk.PhotoImage(file='assets/redakt.png').subsample(25, 25)
+        edit_button = tk.Button(table_inner_frame, image=edit_icon, borderwidth=0, background="#f8f9fa", 
+                                command=lambda shipment_id=shipment[0]: show_edit_form(shipment_id))
         edit_button.image = edit_icon
         edit_button.grid(row=row_idx, column=len(corrected_shipment), padx=5, pady=5, sticky='nsew')
+
+
+
 
 # Функция для отображения формы редактирования перевозки
 def show_edit_form(shipment_id):
