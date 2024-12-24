@@ -114,27 +114,34 @@ def update_shipment(shipment_id, **kwargs):
 def generate_report(departure_point=None, destination_point=None, cargo_type=None):
     conn = sqlite3.connect('cargo_tracking.db')
     cursor = conn.cursor()
-    
-    query = '''SELECT departure_point, destination_point, COUNT(*) as train_count, SUM(weight) as total_weight
-               FROM shipments WHERE status = "завершен"'''
+
+    query = '''
+        SELECT departure_point, destination_point, COUNT(*) as train_count, SUM(weight) as total_weight
+        FROM shipments
+        WHERE 1=1
+    '''
     params = []
-    
+
+    # Добавляем фильтры в запрос
     if departure_point:
-        query += " AND departure_point = ?"
-        params.append(departure_point)
+        query += " AND TRIM(LOWER(departure_point)) = TRIM(LOWER(?))"
+        params.append(departure_point.strip())
     if destination_point:
-        query += " AND destination_point = ?"
-        params.append(destination_point)
+        query += " AND TRIM(LOWER(destination_point)) = TRIM(LOWER(?))"
+        params.append(destination_point.strip())
     if cargo_type:
-        query += " AND cargo_type = ?"
-        params.append(cargo_type)
-    
+        query += " AND TRIM(LOWER(cargo_type)) = TRIM(LOWER(?))"
+        params.append(cargo_type.strip())
+
     query += " GROUP BY departure_point, destination_point"
+
     cursor.execute(query, params)
     rows = cursor.fetchall()
-    
     conn.close()
+
     return rows
+
+
 
 def get_senders_by_type(sender_type):
     conn = sqlite3.connect('cargo_tracking.db')
@@ -820,24 +827,29 @@ def update_report(report_text, filters=None, reset=False):
     if reset:
         report_text.configure(state='normal')  # Делаем текстовую область редактируемой для очистки
         report_text.delete(1.0, tk.END)       # Полностью очищаем текстовую область
+        report_text.insert(tk.END, "Нет данных для отображения.")  # Добавляем сообщение
         report_text.configure(state='disabled')  # Возвращаем текстовую область в состояние только для чтения
         return
 
     rows = generate_report(**filters) if filters else generate_report()
     report_data = ""
 
-    for row in rows:
-        report_data += (
-            f"Пункт отправления: {row[0]}, "
-            f"Пункт прибытия: {row[1]}, "
-            f"Количество поездов: {row[2]}, "
-            f"Общий вес: {row[3]} тонн\n"
-        )
+    if rows:
+        for row in rows:
+            report_data += (
+                f"Пункт отправления: {row[0]}, "
+                f"Пункт прибытия: {row[1]}, "
+                f"Количество поездов: {row[2]}, "
+                f"Общий вес: {row[3]} тонн\n"
+            )
+    else:
+        report_data = "Нет данных для отображения."
 
     report_text.configure(state='normal')  # Делаем текстовую область редактируемой для обновления
     report_text.delete(1.0, tk.END)       # Очищаем текстовую область
-    report_text.insert(tk.END, report_data if report_data else "Нет данных для отображения.")
+    report_text.insert(tk.END, report_data)
     report_text.configure(state='disabled')  # Возвращаем текстовую область в состояние только для чтения
+
 
 
 # Функция для отображения фильтрации в отчетах
@@ -870,9 +882,9 @@ def show_filter_options(report_text):
     # Применение фильтров
     def apply_filters():
         filters = {
-            "departure_point": departure_entry.get() if departure_entry.get() else None,
-            "destination_point": destination_entry.get() if destination_entry.get() else None,
-            "cargo_type": cargo_combobox.get() if cargo_combobox.get() else None,
+            "departure_point": departure_entry.get().strip() if departure_entry.get() else None,
+            "destination_point": destination_entry.get().strip() if destination_entry.get() else None,
+            "cargo_type": cargo_combobox.get().strip() if cargo_combobox.get() else None,
         }
         update_report(report_text, filters)
         filter_window.destroy()
@@ -883,6 +895,7 @@ def show_filter_options(report_text):
 
     cancel_button = ttk.Button(filter_frame, text="Отмена", command=filter_window.destroy)
     cancel_button.grid(row=4, column=0, columnspan=2, pady=5)
+
 
 if __name__ == "__main__":
     init_db()
