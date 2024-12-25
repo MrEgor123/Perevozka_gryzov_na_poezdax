@@ -101,14 +101,20 @@ def get_all_shipments():
 def update_shipment(shipment_id, **kwargs):
     conn = sqlite3.connect('cargo_tracking.db')
     cursor = conn.cursor()
-    
-    update_query = "UPDATE shipments SET " + ", ".join([f"{key} = ?" for key in kwargs.keys()]) + " WHERE id = ?"
-    values = list(kwargs.values()) + [shipment_id]
-    
-    cursor.execute(update_query, values)
-    
-    conn.commit()
-    conn.close()
+
+    try:
+        # Формируем запрос на обновление
+        update_query = "UPDATE shipments SET " + ", ".join([f"{key} = ?" for key in kwargs.keys()]) + " WHERE id = ?"
+        values = list(kwargs.values()) + [shipment_id]
+
+        # Выполняем запрос
+        cursor.execute(update_query, values)
+        conn.commit()
+    except Exception as e:
+        print(f"Ошибка обновления: {e}")
+    finally:
+        conn.close()
+
 
 # Формирование отчета по выполненным перевозкам
 def generate_report(departure_point=None, destination_point=None, cargo_type=None):
@@ -212,34 +218,22 @@ def show_add_form():
         widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
 
     # Функция для обновления списка отправителей в зависимости от типа
-    def update_sender_list(event=None):
+    def update_sender_list():
         selected_type = left_fields[5][1].get()  # Тип отправителя
         if selected_type:
             senders = get_senders_by_type(selected_type)
-            left_fields[6][1]['values'] = senders  # Обновляем список в Combobox
-            if senders:  # Если есть отправители, устанавливаем первый элемент списка
-                left_fields[6][1].set(senders[0])
-            else:
-                left_fields[6][1].set("")  # Если отправителей нет, очищаем поле
+            left_fields[6][1]['values'] = senders
         else:
             left_fields[6][1]['values'] = []
-            left_fields[6][1].set("")
-
 
     # Функция для обновления списка получателей в зависимости от типа
-    def update_receiver_list(event=None):
+    def update_receiver_list():
         selected_type = right_fields[4][1].get()  # Тип получателя
         if selected_type:
             receivers = get_receivers_by_type(selected_type)
-            right_fields[5][1]['values'] = receivers  # Обновляем список в Combobox
-            if receivers:  # Если есть получатели, устанавливаем первый элемент списка
-                right_fields[5][1].set(receivers[0])
-            else:
-                right_fields[5][1].set("")  # Если получателей нет, очищаем поле
+            right_fields[5][1]['values'] = receivers
         else:
             right_fields[5][1]['values'] = []
-            right_fields[5][1].set("")
-
 
     # Привязка события изменения типа отправителя/получателя
     left_fields[5][1].bind("<<ComboboxSelected>>", lambda e: update_sender_list())
@@ -615,16 +609,19 @@ sort_order_status_desc = False  # По умолчанию сортировка �
 
 # Обновление главной таблицы с перевозками
 # Обновление главной таблицы с перевозками
+# Обновление главной таблицы с перевозками
+# Обновление главной таблицы с перевозками
 def update_main_table(order_by=None):
     global sort_order_train_number_desc, sort_order_status_desc
 
-    # Очистка таблицы перед обновлением данных
+    # Очистка текущей таблицы
     for widget in table_inner_frame.winfo_children():
         widget.destroy()
 
+    # Получаем все перевозки из базы данных
     shipments = get_all_shipments()
 
-    # Сортировка данных
+    # Проверяем на необходимость сортировки
     if order_by == 'train_number':
         sort_order_train_number_desc = not sort_order_train_number_desc
         shipments.sort(key=lambda x: int(x[1]) if x[1].isdigit() else 0, reverse=sort_order_train_number_desc)
@@ -632,45 +629,80 @@ def update_main_table(order_by=None):
         sort_order_status_desc = not sort_order_status_desc
         shipments.sort(key=lambda x: x[14], reverse=sort_order_status_desc)
 
-    # Обновленный порядок заголовков и данных
-    headers = ["ID", "Номер поезда", "Тип локомотива", "Тип вагона", "Тип груза", "Вес груза",
-               "Дата отправления", "Дата прибытия", "Пункт отправления", "Пункт прибытия",
-               "Тип отправителя", "Отправитель", "Тип получателя", "Получатель", "Статус"]
-    
-    for col, header in enumerate(headers):
-        label = tk.Label(table_inner_frame, text=header, font=("Arial", 12, "bold"), borderwidth=1, relief="solid", 
-                         padx=5, pady=5, background="#e0e0e0")
-        label.grid(row=0, column=col, sticky="nsew", ipadx=5, ipady=5, padx=2)
+    # Определение заголовков таблицы (строго в порядке соответствия отображению)
+    headers = [
+        "ID", "Номер поезда", "Тип локомотива", "Тип груза", "Тип вагона", "Вес груза",
+        "Дата отправления", "Дата прибытия", "Пункт отправления", "Пункт прибытия",
+        "Тип отправителя", "Отправитель", "Тип получателя", "Получатель", "Статус"
+    ]
 
+    # Создаём заголовки таблицы
+    for col_idx, header in enumerate(headers):
+        label = tk.Label(
+            table_inner_frame,
+            text=header,
+            font=("Arial", 12, "bold"),
+            borderwidth=1,
+            relief="solid",
+            padx=5,
+            pady=5,
+            background="#e0e0e0"
+        )
+        label.grid(row=0, column=col_idx, sticky="nsew", ipadx=5, ipady=5, padx=2)
+
+    # Отображаем строки с данными
     for row_idx, shipment in enumerate(shipments, start=1):
-        corrected_shipment = (
+        # Явно задаём порядок отображения данных в соответствии с заголовками
+        row_data = [
             shipment[0],  # ID
             shipment[1],  # Номер поезда
-            shipment[4],  # Тип локомотива
-            shipment[3],  # Тип вагона
-            shipment[2],  # Тип груза
+            shipment[2],  # Тип локомотива
+            shipment[3],  # Тип груза
+            shipment[4],  # Тип вагона
             shipment[5],  # Вес груза
             shipment[6],  # Дата отправления
             shipment[7],  # Дата прибытия
             shipment[8],  # Пункт отправления
             shipment[9],  # Пункт прибытия
-            shipment[10], # Тип отправителя
-            shipment[11], # Отправитель
-            shipment[12], # Тип получателя
-            shipment[13], # Получатель
-            shipment[14]  # Статус
-        )
-        for col_idx, value in enumerate(corrected_shipment):
-            label = tk.Label(table_inner_frame, text=value, font=("Arial", 10), borderwidth=1, relief="solid", 
-                             padx=5, pady=5, background="#ffffff")
+            shipment[10],  # Тип отправителя
+            shipment[11],  # Отправитель
+            shipment[12],  # Тип получателя
+            shipment[13],  # Получатель
+            shipment[14],  # Статус
+        ]
+
+        # Заполняем таблицу данными
+        for col_idx, value in enumerate(row_data):
+            label = tk.Label(
+                table_inner_frame,
+                text=value if value is not None else "",  # Проверяем на None
+                font=("Arial", 10),
+                borderwidth=1,
+                relief="solid",
+                padx=5,
+                pady=5,
+                background="#ffffff"
+            )
             label.grid(row=row_idx, column=col_idx, sticky="nsew", ipadx=5, ipady=5, padx=2)
 
-        # Кнопка редактирования
+        # Добавляем кнопку редактирования
         edit_icon = tk.PhotoImage(file='assets/redakt.png').subsample(25, 25)
-        edit_button = tk.Button(table_inner_frame, image=edit_icon, borderwidth=0, background="#f8f9fa", 
-                                command=lambda shipment_id=shipment[0]: show_edit_form(shipment_id))
+        edit_button = tk.Button(
+            table_inner_frame,
+            image=edit_icon,
+            borderwidth=0,
+            background="#f8f9fa",
+            command=lambda shipment_id=shipment[0]: show_edit_form(shipment_id)
+        )
         edit_button.image = edit_icon
-        edit_button.grid(row=row_idx, column=len(corrected_shipment), padx=5, pady=5, sticky='nsew')
+        edit_button.grid(row=row_idx, column=len(row_data), padx=5, pady=5, sticky='nsew')
+
+    # Выравнивание колонок
+    for col_idx in range(len(headers)):
+        table_inner_frame.grid_columnconfigure(col_idx, weight=1)
+
+
+
 
 
 
@@ -714,43 +746,22 @@ def show_edit_form(shipment_id):
         ("Статус", ttk.Combobox(right_frame, values=["запланирована", "в процессе", "завершена", "отменена"])),
     ]
 
-    # Заполнение текущих значений
+    # Заполнение текущими значениями
     left_fields[0][1].insert(0, shipment[1])  # Номер поезда
     left_fields[1][1].set(shipment[2])  # Тип груза
     left_fields[2][1].set(shipment[3])  # Тип вагона
     left_fields[3][1].set(shipment[4])  # Тип локомотива
     left_fields[4][1].insert(0, shipment[5])  # Вес груза
     left_fields[5][1].set(shipment[10])  # Тип отправителя
-    left_fields[6][1].set(shipment[11])  # Установка текущего отправителя
+    left_fields[6][1].set(shipment[11])  # Отправитель
 
     right_fields[0][1].set_date(datetime.strptime(shipment[6], "%Y-%m-%d"))  # Дата отправления
     right_fields[1][1].set_date(datetime.strptime(shipment[7], "%Y-%m-%d"))  # Дата прибытия
     right_fields[2][1].insert(0, shipment[8])  # Пункт отправления
     right_fields[3][1].insert(0, shipment[9])  # Пункт прибытия
     right_fields[4][1].set(shipment[12])  # Тип получателя
-    right_fields[5][1].set(shipment[13])  # Установка текущего получателя
+    right_fields[5][1].set(shipment[13])  # Получатель
     right_fields[6][1].set(shipment[14])  # Статус
-
-    # Функции обновления списков
-    def update_sender_list():
-        sender_type = left_fields[5][1].get()
-        if sender_type:
-            senders = get_senders_by_type(sender_type)
-            left_fields[6][1]['values'] = senders
-        else:
-            left_fields[6][1]['values'] = []
-
-    def update_receiver_list():
-        receiver_type = right_fields[4][1].get()
-        if receiver_type:
-            receivers = get_receivers_by_type(receiver_type)
-            right_fields[5][1]['values'] = receivers
-        else:
-            right_fields[5][1]['values'] = []
-
-    # Привязка событий
-    left_fields[5][1].bind("<<ComboboxSelected>>", lambda e: update_sender_list())
-    right_fields[4][1].bind("<<ComboboxSelected>>", lambda e: update_receiver_list())
 
     # Отображение полей
     for idx, (label_text, widget) in enumerate(left_fields):
@@ -760,14 +771,6 @@ def show_edit_form(shipment_id):
     for idx, (label_text, widget) in enumerate(right_fields):
         tk.Label(right_frame, text=label_text).grid(row=idx, column=0, padx=10, pady=5, sticky='e')
         widget.grid(row=idx, column=1, padx=10, pady=5, sticky='w')
-
-    # Кнопки управления
-    button_frame = ttk.Frame(form_window)
-    button_frame.grid(row=1, column=0, columnspan=2, pady=20)
-
-    ttk.Button(button_frame, text="Отменить", command=form_window.destroy).grid(row=0, column=0, padx=10)
-    ttk.Button(button_frame, text="Сохранить", command=lambda: save_data(shipment_id)).grid(row=0, column=1, padx=10)
-
 
     def save_data():
         try:
@@ -797,15 +800,8 @@ def show_edit_form(shipment_id):
         except Exception as e:
             messagebox.showerror("Ошибка", f"Произошла ошибка: {e}")
 
-    # Кнопки управления
-    button_frame = ttk.Frame(form_window)
-    button_frame.grid(row=1, column=0, columnspan=2, pady=20)
-
-    cancel_button = ttk.Button(button_frame, text="Отменить", command=form_window.destroy)
-    cancel_button.grid(row=0, column=0, padx=10)
-
-    save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
-    save_button.grid(row=0, column=1, padx=10)
+    ttk.Button(form_window, text="Сохранить", command=save_data).grid(row=1, column=0, pady=20)
+    ttk.Button(form_window, text="Отменить", command=form_window.destroy).grid(row=1, column=1, pady=20)
 
 # Функция для отображения формы отчетов
 def show_reports():

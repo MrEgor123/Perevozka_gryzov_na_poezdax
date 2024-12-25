@@ -807,6 +807,9 @@ def show_edit_form(shipment_id):
     save_button = ttk.Button(button_frame, text="Сохранить", command=save_data)
     save_button.grid(row=0, column=1, padx=10)
 
+
+
+
 # Функция для отображения формы отчетов
 def show_reports():
     report_window = tk.Toplevel()
