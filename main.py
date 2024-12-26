@@ -141,8 +141,6 @@ def generate_report(departure_point=None, destination_point=None, cargo_type=Non
 
     return rows
 
-
-
 def get_senders_by_type(sender_type):
     conn = sqlite3.connect('cargo_tracking.db')
     cursor = conn.cursor()
@@ -419,8 +417,6 @@ def show_receiver_form():
     update_receiver_form()  # Инициализация полей при открытии окна
 
 # Функция для сохранения отправителя в базу данных
-# Функция для сохранения отправителя в базу данных
-# Функция для сохранения отправителя в базу данных
 def save_sender(window, sender_type_combobox):
     conn = sqlite3.connect('cargo_tracking.db')
     cursor = conn.cursor()
@@ -445,10 +441,6 @@ def save_sender(window, sender_type_combobox):
     messagebox.showinfo("Успех", "Данные отправителя успешно сохранены")
     window.destroy()
 
-
-
-# Функция для сохранения получателя в базу данных
-# Функция для сохранения получателя в базу данных
 # Функция для сохранения получателя в базу данных
 def save_receiver(window, receiver_type_combobox):
     conn = sqlite3.connect('cargo_tracking.db')
@@ -474,8 +466,6 @@ def save_receiver(window, receiver_type_combobox):
     messagebox.showinfo("Успех", "Данные получателя успешно сохранены")
     window.destroy()
 
-
-
 # Функция для отображения помощи
 def show_help():
     try:
@@ -498,9 +488,6 @@ def show_help():
     except FileNotFoundError:
         messagebox.showerror("Ошибка", "Файл помощи не найден.")
 
-# Создание главного окна приложения
-# Создание главного окна приложения
-# Создание главного окна приложения
 # Создание главного окна приложения
 def create_main_window():
     global root, table_frame, canvas, scrollbar, table_inner_frame
@@ -614,7 +601,6 @@ sort_order_train_number_desc = False  # По умолчанию сортиров
 sort_order_status_desc = False  # По умолчанию сортировка по возрастанию
 
 # Обновление главной таблицы с перевозками
-# Обновление главной таблицы с перевозками
 def update_main_table(order_by=None):
     global sort_order_train_number_desc, sort_order_status_desc
 
@@ -671,9 +657,6 @@ def update_main_table(order_by=None):
                                 command=lambda shipment_id=shipment[0]: show_edit_form(shipment_id))
         edit_button.image = edit_icon
         edit_button.grid(row=row_idx, column=len(corrected_shipment), padx=5, pady=5, sticky='nsew')
-
-
-
 
 # Функция для отображения формы редактирования перевозки
 def show_edit_form(shipment_id):
@@ -767,7 +750,6 @@ def show_edit_form(shipment_id):
 
     ttk.Button(button_frame, text="Отменить", command=form_window.destroy).grid(row=0, column=0, padx=10)
     ttk.Button(button_frame, text="Сохранить", command=lambda: save_data(shipment_id)).grid(row=0, column=1, padx=10)
-
 
     def save_data():
         try:
@@ -867,8 +849,6 @@ def update_report(report_text, filters=None, reset=False):
     report_text.delete(1.0, tk.END)       # Очищаем текстовую область
     report_text.insert(tk.END, report_data)
     report_text.configure(state='disabled')  # Возвращаем текстовую область в состояние только для чтения
-
-
 
 # Функция для отображения фильтрации в отчетах
 def show_filter_options(report_text):
